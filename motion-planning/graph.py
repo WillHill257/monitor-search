@@ -69,7 +69,7 @@ class AStarNode:
     # overload the equality operator
     def __eq__(self, __o: object) -> bool:
         # compare the class type and coordinate valuess
-        return self.node == __o.node
+        return isinstance(__o, self.__class__) and self.node == __o.node
 
     # overload the not-equal operator
     def __ne__(self, __o: object) -> bool:
@@ -129,7 +129,8 @@ class Graph:
         found = False
         while not frontier.empty():
             # get the next (cheapest) node to visit
-            currentNode = frontier.get()
+            # take the 2nd element, which is the object (1st is the priority)
+            currentNode = frontier.get()[1]
 
             # lazy deletion
             # check if this node has been visited/seen before

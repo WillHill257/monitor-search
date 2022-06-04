@@ -3,8 +3,6 @@
 - Includes transformation functions so that our PRM view is constant
 """
 
-from nav_msgs.msg import OccupancyGrid, MapMetaData
-from geometry_msgs.msg import Pose
 import numpy as np
 from skimage.morphology import disk, binary_dilation
 
@@ -27,11 +25,12 @@ class Map:
 
     # return the element given a 2D index
     def at(self, x: int, y: int):
-        return self.map[x + y * self.width]
+        # return self.data[x + y * self.width]
+        return self.data[y, x]
 
     # return the element given a 1D index - OVERLOADED
-    def at(self, index: int):
-        return self.map[index]
+    # def at(self, index: int):
+    #     return self.map[index]
 
     # updates the map with occupancy grid
     def updateMap(self, occupancyGrid) -> None:
@@ -44,39 +43,38 @@ class Map:
 
         # dilate the binary grid to account for size of robot
         SE = disk(self.robot_radius)
-        self.data = binary_dilation(self.data, SE)
+        self.data = 1 - binary_dilation(1 - self.data, SE)
 
-        self.height = occupancyGrid.shape[1]
-        self.width = occupancyGrid.shape[0]
+        self.height = occupancyGrid.shape[0]
+        self.width = occupancyGrid.shape[1]
 
     # checks if a given coord is free, i.e. no obstacles and known
-
     def isFree(self, x, y):
         # TODO: tune this
-        return self.at(x, y) == 0
+        return self.at(x, y) == 1
 
     def isVisible(self, node1, node2):
         dist = node1.distance(node2)
 
         # use a ray to check for a intersection between the nodes
-        n1 = np.array([node1.x, node1.y])
-        n2 = np.array([node2.x, node2.y])
+        n1 = np.array([node1.x, node1.y]).astype(np.float64)
+        n2 = np.array([node2.x, node2.y]).astype(np.float64)
 
         # ray march from the first point to the second
         ro = n1
         rd = n2 - n1
-        rd = rd/np.sum(rd)  # normalise ray direction
+        rd = rd / np.sum(np.abs(rd))  # normalise ray direction
 
         dist_travelled = 0
-        pos = ro
+        pos = np.copy(ro)
 
         # ray marching loop
-        while(dist_travelled < dist):
+        while dist_travelled < dist:
             pos += rd * self.step_size
 
-            if(not self.isFree(int(pos[0]), int(pos[1]))):
+            if not self.isFree(int(pos[0]), int(pos[1])):
                 return False
 
-            dist_travelled += self.step_size
+            dist_travelled += (np.sum((rd * self.step_size) ** 2)) ** 0.5
 
         return True
