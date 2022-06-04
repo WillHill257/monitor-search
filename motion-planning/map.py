@@ -16,7 +16,7 @@ class Map:
         self.data = []
         self.height = 0
         self.width = 0
-        self.origin = None
+        # self.origin = None
 
         # visibility ray casting step size
         self.step_size = step_size
@@ -38,7 +38,7 @@ class Map:
 
         # convert the occupancy grid into a binary image
         # this is useful for dilation purposes
-        self.data = np.array(occupancyGrid.data)
+        self.data = occupancyGrid
         self.data = np.abs(self.data)
         self.data = self.data > self.threshold
 
@@ -46,11 +46,11 @@ class Map:
         SE = disk(self.robot_radius)
         self.data = binary_dilation(self.data, SE)
 
-        self.height = occupancyGrid.info.height
-        self.width = occupancyGrid.info.width
-        self.origin = occupancyGrid.info.origin
+        self.height = occupancyGrid.shape[1]
+        self.width = occupancyGrid.shape[0]
 
     # checks if a given coord is free, i.e. no obstacles and known
+
     def isFree(self, x, y):
         # TODO: tune this
         return self.at(x, y) == 0

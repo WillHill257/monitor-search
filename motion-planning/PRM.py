@@ -25,7 +25,7 @@ class PRM:
     # updates the map of the world/environment
 
     def updateMap(self, occupancyGrid):
-        self.worldmap.update(occupancyGrid)
+        self.worldmap.updateMap(occupancyGrid)
 
     # sample a random point with in the bounds of the world map
     def samplePoint(self):
@@ -64,8 +64,8 @@ class PRM:
     # set the start coordinate
     def setStart(self, start: Node) -> None:
         # remove the current start from the graph
-        if self.start != None:
-            self.graph.removeNode(self.start)
+        # if self.start != None:
+        #     self.graph.removeNode(self.start)
 
         # set the start node
         self.start = start
@@ -82,8 +82,8 @@ class PRM:
     # set the target coordinate
     def setTarget(self, target: Node) -> None:
         # remove the current target from the graph
-        if self.target != None:
-            self.graph.removeNode(self.target)
+        # if self.target != None:
+        #     self.graph.removeNode(self.target)
 
         # set the target node
         self.target = target
