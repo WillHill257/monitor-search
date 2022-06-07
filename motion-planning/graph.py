@@ -3,12 +3,37 @@
 - Will has a graph class representing all the nodes and graph-level algorithms like astar
 """
 
-from queue import PriorityQueue
-from typing import List, Tuple
+# from queue import PriorityQueue
+# from typing import List, Tuple
 
+def BFS(graph, start, goal):
+    explored = []
+
+    queue = [[start]]
+
+    if start == goal:
+        return
+
+    while queue:
+        path = queue.pop(0)
+        node = path[-1]
+
+        if node not in explored:
+            neighbours = graph[node]
+
+            for neighbour in neighbours:
+                newPath = list(path)
+                newPath.append(neighbour)
+                queue.append(newPath)
+
+                if neighbour == goal:
+                    return newPath
+            explored.append(node)
+
+    return None
 
 class Node:
-    def __init__(self, x: float, y: float) -> None:
+    def __init__(self, x, y):
         # takes in the x and y position of the cell represented by this node
         self.x = x
         self.y = y
@@ -17,41 +42,41 @@ class Node:
         self.adjacencies = []
 
     # add adajcency
-    def addAdjacency(self, node: object) -> None:
+    def addAdjacency(self, node):
         # add the other node to our adjacency list
         self.adjacencies.append(node)
 
     # remove adjacency
-    def removeAdjacency(self, node: object) -> None:
+    def removeAdjacency(self, node):
         self.adjacencies.remove(node)
 
     # determine the straight line distance to another node
-    def distance(self, node: object) -> float:
+    def distance(self, node):
         # use euclidean distance
         return ((self.x - node.x) ** 2 + (self.y - node.y) ** 2) ** 0.5
 
     # convert the coordinates to a string
-    def toString(self) -> str:
+    def toString(self):
         return str(self.x) + ";" + str(self.y)
 
     # overload the equality operator
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o):
         # compare the class type and coordinate valuess
         return isinstance(__o, self.__class__) and __o.x == self.x and __o.y == self.y
 
     # overload the not-equal operator
-    def __ne__(self, __o: object) -> bool:
+    def __ne__(self, __o):
         return not self.__eq__(__o)
 
     # overload the hash
-    def __hash__(self) -> int:
+    def __hash__(self):
         # hash is just the coordinates represented by this node
         return hash(self.toString())
 
 
 # node for use with astar
 class AStarNode:
-    def __init__(self, node: Node) -> None:
+    def __init__(self, node):
         # save the node
         self.node = node
 
@@ -67,32 +92,32 @@ class AStarNode:
         return self.g + self.h
 
     # overload the equality operator
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, __o):
         # compare the class type and coordinate valuess
         return isinstance(__o, self.__class__) and self.node == __o.node
 
     # overload the not-equal operator
-    def __ne__(self, __o: object) -> bool:
+    def __ne__(self, __o):
         return not self.__eq__(__o)
 
     # overload the hash
-    def __hash__(self) -> int:
+    def __hash__(self):
         # hash is just the coordinates represented by this node
         return self.node.__hash__()
 
 
 class Graph:
-    def __init__(self) -> None:
+    def __init__(self):
         # create a set of nodes, which will just be coordinates
         # set because possibility of duplicates when sampling
         self.nodes = set()
 
     # add a node
-    def addNode(self, node: Node) -> None:
+    def addNode(self, node):
         self.nodes.add(node)
 
     # remove a node
-    def removeNode(self, node: Node) -> None:
+    def removeNode(self, node):
         # loop through the node's adjacency list
         for adjacency in node.adjacencies:
             # remove this node from the adjacent nodes
@@ -102,13 +127,13 @@ class Graph:
         self.nodes.remove(node)
 
     # return the heuristic distance to the target
-    def heuristic(self, target: Node, point: Node) -> float:
+    def heuristic(self, target, point):
         # use the straight line distance
         return target.distance(point)
 
     # perform astar from the start to the target nodes
     # will return a boolean of if a path exists and the list of waypoints (if applicable)
-    def astar(self, start: Node, target: Node) -> Tuple[bool, List[str]]:
+    def astar(self, start, target):
         # confirm that start and target aren't the same node
         if start == target:
             return (True, [])

@@ -6,7 +6,7 @@
 from map import Map
 from graph import *
 import random
-from typing import List
+#from typing import List
 import matplotlib.pyplot as plt
 
 
@@ -14,7 +14,7 @@ class PRM:
     # initialise
     def __init__(
         self, adjacency_radius, step_size, occupancy_threshold, robot_radius
-    ) -> None:
+    ):
         self.worldmap = Map(step_size, occupancy_threshold, robot_radius)
         self.roadmap = Graph()
         self.start = None
@@ -65,7 +65,7 @@ class PRM:
                         self.performNodeAdjacencyAddition(node, new_node)
 
     # set the start coordinate
-    def setStart(self, start: Node) -> None:
+    def setStart(self, start):
         # remove the current start from the graph
         # if self.start != None:
         #     self.roadmap.removeNode(self.start)
@@ -83,7 +83,7 @@ class PRM:
         self.roadmap.addNode(self.start)
 
     # set the target coordinate
-    def setTarget(self, target: Node) -> None:
+    def setTarget(self, target):
         # remove the current target from the graph
         # if self.target != None:
         #     self.roadmap.removeNode(self.target)
@@ -101,7 +101,7 @@ class PRM:
         self.roadmap.addNode(self.target)
 
     # find a path
-    def findPath(self) -> List[str]:
+    def findPath(self):
         # try and find a path
         path_found, path = self.roadmap.astar(self.start, self.target)
 

@@ -4,11 +4,46 @@
 """
 
 import numpy as np
-from skimage.morphology import disk, binary_dilation
+#from skimage.morphology import disk, binary_dilation
 
+# function to perform dilation
+def dilate(f, SE):
+  # f is the image
+  # SE is the Structuring Element
+
+  # rotate SE by 180 degrees to get its reflection
+  SE = np.rot90(SE, 2)
+
+  # treat centre of se as its origin
+
+  # pad the bottom and right of the image
+  heightPad = (SE.shape[0] - 1) // 2
+  widthPad = (SE.shape[1] - 1) // 2
+  fPadded = np.pad(f, ((heightPad, heightPad), (widthPad, widthPad)))
+
+  # loop over the image pixels
+  out = np.zeros_like(f)
+
+  for x in range(f.shape[0]):
+    for y in range(f.shape[1]):
+      # get the shited offset
+      xShifted = x + heightPad
+      yShifted = y + widthPad
+
+      # pass the structured element over this portion
+      isIncluded = False 
+      for u in range(-heightPad, heightPad + 1):
+        for v in range(-widthPad, widthPad + 1):
+          if (SE[u + heightPad, v + widthPad]):
+            isIncluded = isIncluded or fPadded[xShifted + u, yShifted + v]
+
+      # based on value of isIncluded, set to 1 or 0
+      out[x, y] = float(isIncluded)
+
+  return out
 
 class Map:
-    def __init__(self, step_size, occupancy_threshold, robot_radius) -> None:
+    def __init__(self, step_size, occupancy_threshold, robot_radius):
         # define the map, which is a 1D array of the specified height and width
         # map is ROW-MAJOR
         self.data = []
@@ -24,7 +59,7 @@ class Map:
         self.robot_radius = robot_radius
 
     # return the element given a 2D index
-    def at(self, x: int, y: int):
+    def at(self, x, y):
         # return self.data[x + y * self.width]
         return self.data[y, x]
 
@@ -33,7 +68,7 @@ class Map:
     #     return self.map[index]
 
     # updates the map with occupancy grid
-    def updateMap(self, occupancyGrid) -> None:
+    def updateMap(self, occupancyGrid):
 
         # convert the occupancy grid into a binary image
         # this is useful for dilation purposes
@@ -42,8 +77,8 @@ class Map:
         self.data = self.data > self.threshold
 
         # dilate the binary grid to account for size of robot
-        SE = disk(self.robot_radius)
-        self.data = 1 - binary_dilation(1 - self.data, SE)
+        SE = np.ones((self.robot_radius*2, self.robot_radius*2))
+        self.data = 1 - dilate(1 - self.data, SE)
 
         self.height = occupancyGrid.shape[0]
         self.width = occupancyGrid.shape[1]
