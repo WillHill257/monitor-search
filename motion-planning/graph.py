@@ -185,7 +185,7 @@ class Graph:
         currentNode = targetNode
         while currentNode != None:
             # add the current coords to the path
-            path.append(currentNode.node.toString())
+            path.append((currentNode.node.x, currentNode.node.y))
 
             # traverse to the parent
             currentNode = currentNode.parent

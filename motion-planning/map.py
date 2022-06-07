@@ -63,7 +63,7 @@ class Map:
         # ray march from the first point to the second
         ro = n1
         rd = n2 - n1
-        rd = rd / np.sum(np.abs(rd))  # normalise ray direction
+        rd = rd / np.sqrt(np.sum(np.power(rd, 2)))  # normalise ray direction
 
         dist_travelled = 0
         pos = np.copy(ro)

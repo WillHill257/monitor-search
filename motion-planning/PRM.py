@@ -32,8 +32,8 @@ class PRM:
 
     # sample a random point with in the bounds of the world map
     def samplePoint(self):
-        x = random.randint(0, self.worldmap.width - 1)
-        y = random.randint(0, self.worldmap.height - 1)
+        x = random.randint(65, 417)
+        y = random.randint(120, 400)
 
         return (x, y)
 
@@ -112,9 +112,10 @@ class PRM:
 
             # expand the roadmap
             self.expandRoadmap(self.ROADMAP_ADDITIONAL_SAMPLE_SIZE)
-
+            print("expanding with", len(self.roadmap.nodes), "exsiting nodes")
+            # self.visualise()
             # check for a path
-            path = self.roadmap.astar(self.start, self.target)
+            path_found, path = self.roadmap.astar(self.start, self.target)
 
             count += 1
 
@@ -156,11 +157,11 @@ class PRM:
         # plot the path
         if path:
             for i in range(1, len(path)):
-                lineSplitPrev = path[i - 1].split(";")
-                lineSplit = path[i].split(";")
+                node0 = path[i - 1]
+                node1 = path[i]
                 plt.plot(
-                    [int(lineSplitPrev[0]), int(lineSplit[0])],
-                    [int(lineSplitPrev[1]), int(lineSplit[1])],
+                    [int(node0[0]), int(node1[0])],
+                    [int(node0[1]), int(node1[1])],
                     linewidth=1,
                     color="orange",
                     label="path" if i == 1 else "",
@@ -188,8 +189,8 @@ class PRM:
             )
 
         # set the axis limits
-        plt.xlim((0, self.worldmap.width))
-        plt.ylim((0, self.worldmap.height))
+        # plt.xlim((0, self.worldmap.width))
+        # plt.ylim((0, self.worldmap.height))
 
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
