@@ -21,18 +21,18 @@ from world_state import WorldController
 from controller import BasicBotController
 from PID import PID
 import datetime
-import threading
+
+world = WorldController()
 
 def talker(waypoints):
 
-    node = rospy.init_node("talker", anonymous=True)
 
-    pid_x = PID(0.2, 0.1, 0.5)
+    pid_x = PID(0.5, 0.1, 0.5)
     pid_rot = PID(2, 0.1, 0.15)
 
     controller = BasicBotController()
 
-    world = WorldController()
+    
 
     start = datetime.datetime.now()
 
@@ -78,7 +78,9 @@ def talker(waypoints):
 
             controller.SetRotate(control_rot)
 
-            if np.abs(control_rot) < 0.5:
+            drift_threshold = 0.5
+
+            if np.abs(control_rot) < drift_threshold:
                 np_pos = np.array([position.x, position.y])
 
                 control_x = pid_x.u(np_pos, setpoint)
@@ -96,8 +98,12 @@ def talker(waypoints):
 
 if __name__ == "__main__":
 
+    node = rospy.init_node("talker", anonymous=True)
+
+    goal= list(map(int, raw_input("Enter goal position: ").split(" ")))
+
     # read in the PGM map, and convert all elements to [0, 1]
-    mapImage = plt.imread("./map3.pgm") / 255.0
+    mapImage = plt.imread("./map3_edited.pgm") / 255.0
     # rotate the map a little
     a = pi/40
     R = np.array([
@@ -111,7 +117,7 @@ if __name__ == "__main__":
     # mapImage = affine_transform(mapImage, np.linalg.inv(T))
 
     # calculating from image pixel, so distances are based on number of pixels
-    trueRobotRadius = 0.3  # metres
+    trueRobotRadius = 0.15  # metres
     mapResolution = 0.05  # metres/block
 
     # transform from world to picture
@@ -122,24 +128,31 @@ if __name__ == "__main__":
     ])
 
     WtP = np.matmul(T, R)
+    PtW = np.linalg.inv(WtP)
 
-    p = np.array([0, 0])  # world origin
-    p = np.matmul(WtP, np.concatenate((p, np.array([1]))))
-    p = p.astype(np.int32)
+    state = world.GetModelState()
+    position = state.position
+    start = np.array([position.x, -position.y])
+    print "starting at: " + str(start[0]) + ", " + str(start[1])
+    # p = np.array([0, 0])  # world origin
+    start = np.matmul(WtP, np.concatenate((start, np.array([1]))))
+    start = start.astype(np.int32)
 
-    prm = PRM(40, 0.25, 0.82, 2*int(np.ceil(trueRobotRadius / mapResolution)))
+    goal = np.array([goal[0], -goal[1]])
+    goal = np.matmul(WtP, np.concatenate((goal, np.array([1]))))
+    goal = goal.astype(np.int32)
+
+    # this is in picture coordinate
+    prm = PRM(50, 0.25, 0.82, 2*int(np.ceil(trueRobotRadius / mapResolution)))
     prm.updateMap(mapImage)
     prm.expandRoadmap(100)
-    prm.setStart(Node(p[0], p[1]))
-    prm.setTarget(Node(100, 150))
+    prm.setStart(Node(start[0], start[1]))
+    prm.setTarget(Node(goal[0], goal[1]))
+
+    # prm.visualise()
     path = prm.findPath()
+    # prm.visualise(path)
 
-    prm.visualise(path)
-
-    # t = threading.Thread(target=prm.visualise, args=(path))
-    # t.start()
-
-    PtW = np.linalg.inv(WtP)
     transformed_path = []
     for i in range(len(path)):
         point = np.matmul(PtW, np.array([path[i].x, path[i].y, 1]))
