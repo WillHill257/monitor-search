@@ -19,7 +19,7 @@ def dilate(f, SE):
   # pad the bottom and right of the image
   heightPad = (SE.shape[0] - 1) // 2
   widthPad = (SE.shape[1] - 1) // 2
-  fPadded = np.pad(f, ((heightPad, heightPad), (widthPad, widthPad)))
+  fPadded = np.pad(f, ((heightPad, heightPad), (widthPad, widthPad)), mode="constant")
 
   # loop over the image pixels
   out = np.zeros_like(f)

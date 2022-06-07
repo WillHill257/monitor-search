@@ -133,87 +133,113 @@ class Graph:
 
     # perform astar from the start to the target nodes
     # will return a boolean of if a path exists and the list of waypoints (if applicable)
-    def astar(self, start, target):
-        # confirm that start and target aren't the same node
+    # def astar(self, start, target):
+    #     # confirm that start and target aren't the same node
+    #     if start == target:
+    #         return (True, [])
+
+    #     # define an open list as a priority queue
+    #     # add elements as a tuple: (priority, item)
+    #     frontier = PriorityQueue(maxsize=0)  # no max size
+
+    #     # define the explored set
+    #     explored = set()
+
+    #     # create the start node and add it to the frontier
+    #     startNode = AStarNode(start)
+    #     targetNode = AStarNode(target)
+    #     frontier.put((startNode.cost(), startNode))
+
+    #     # iterate until the frontier is empty or the target is found
+    #     found = False
+    #     while not frontier.empty():
+    #         # get the next (cheapest) node to visit
+    #         # take the 2nd element, which is the object (1st is the priority)
+    #         currentNode = frontier.get()[1]
+
+    #         # lazy deletion
+    #         # check if this node has been visited/seen before
+    #         if currentNode in explored:
+    #             # skip any further processing for this node
+    #             continue
+
+    #         # check if this node is the target
+    #         if currentNode == targetNode:
+    #             # found the target
+    #             found = True
+
+    #             # set the parent
+    #             targetNode.parent = currentNode.parent
+    #             break
+
+    #         # mark this node as visisted
+    #         explored.add(currentNode)
+
+    #         # loop through the adjacent nodes
+    #         for neighbour in currentNode.node.adjacencies:
+    #             # create an AStarNode object
+    #             neighbourNode = AStarNode(neighbour)
+
+    #             # if we have seen this node before, skip it
+    #             if neighbourNode in explored:
+    #                 continue
+
+    #             # set its known cost to the parent's known cost + distance to this node
+    #             neighbourNode.g = currentNode.g + neighbourNode.node.distance(
+    #                 currentNode.node
+    #             )
+
+    #             # set the heuristic cost
+    #             neighbourNode.h = neighbourNode.node.distance(targetNode.node)
+
+    #             # set the parent node to the current node
+    #             neighbourNode.parent = currentNode
+
+    #             # add to the frontier
+    #             # if this node has never been seen before, then great
+    #             # if it has, and this one is cheaper, it will be popped first and lazy deletion will catch the remainder
+    #             # if it has, and this one is more expensive, it will be popped afterwards and lazy deletion will stop it
+    #             frontier.put((neighbourNode.cost(), neighbourNode))
+
+    #     # have finished the search, backtrack to get the path
+    #     if not found:
+    #         return (False, [])
+
+    #     # do the backtrack
+    #     path = []
+    #     currentNode = targetNode
+    #     while currentNode != None:
+    #         # add the current coords to the path
+    #         path.append((currentNode.node.x, currentNode.node.y))
+
+    #         # traverse to the parent
+    #         currentNode = currentNode.parent
+
+    #     # return the reversed list so that the first point is at the beginning
+    #     return (True, path[::-1])
+
+    def BFS(self, start, target):
+        explored = []
+
+        queue = [[start]]
+
         if start == target:
             return (True, [])
 
-        # define an open list as a priority queue
-        # add elements as a tuple: (priority, item)
-        frontier = PriorityQueue(maxsize=0)  # no max size
+        while queue:
+            path = queue.pop(0)
+            currentNode = path[-1]
 
-        # define the explored set
-        explored = set()
+            if currentNode not in explored:
+                neighbours = currentNode.adjacencies
 
-        # create the start node and add it to the frontier
-        startNode = AStarNode(start)
-        targetNode = AStarNode(target)
-        frontier.put((startNode.cost(), startNode))
+                for neighbour in neighbours:
+                    newPath = list(path)
+                    newPath.append(neighbour)
+                    queue.append(newPath)
 
-        # iterate until the frontier is empty or the target is found
-        found = False
-        while not frontier.empty():
-            # get the next (cheapest) node to visit
-            # take the 2nd element, which is the object (1st is the priority)
-            currentNode = frontier.get()[1]
+                    if neighbour == target:
+                        return (True, newPath)
+                explored.append(currentNode)
 
-            # lazy deletion
-            # check if this node has been visited/seen before
-            if currentNode in explored:
-                # skip any further processing for this node
-                continue
-
-            # check if this node is the target
-            if currentNode == targetNode:
-                # found the target
-                found = True
-
-                # set the parent
-                targetNode.parent = currentNode.parent
-                break
-
-            # mark this node as visisted
-            explored.add(currentNode)
-
-            # loop through the adjacent nodes
-            for neighbour in currentNode.node.adjacencies:
-                # create an AStarNode object
-                neighbourNode = AStarNode(neighbour)
-
-                # if we have seen this node before, skip it
-                if neighbourNode in explored:
-                    continue
-
-                # set its known cost to the parent's known cost + distance to this node
-                neighbourNode.g = currentNode.g + neighbourNode.node.distance(
-                    currentNode.node
-                )
-
-                # set the heuristic cost
-                neighbourNode.h = neighbourNode.node.distance(targetNode.node)
-
-                # set the parent node to the current node
-                neighbourNode.parent = currentNode
-
-                # add to the frontier
-                # if this node has never been seen before, then great
-                # if it has, and this one is cheaper, it will be popped first and lazy deletion will catch the remainder
-                # if it has, and this one is more expensive, it will be popped afterwards and lazy deletion will stop it
-                frontier.put((neighbourNode.cost(), neighbourNode))
-
-        # have finished the search, backtrack to get the path
-        if not found:
-            return (False, [])
-
-        # do the backtrack
-        path = []
-        currentNode = targetNode
-        while currentNode != None:
-            # add the current coords to the path
-            path.append((currentNode.node.x, currentNode.node.y))
-
-            # traverse to the parent
-            currentNode = currentNode.parent
-
-        # return the reversed list so that the first point is at the beginning
-        return (True, path[::-1])
+        return (False, [])

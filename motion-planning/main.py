@@ -12,14 +12,16 @@ from PRM import PRM
 from graph import Node
 import numpy as np
 from math import cos, sin, pi
-from scipy.ndimage import affine_transform
+# from scipy.ndimage import affine_transform
+import matplotlib.pyplot as plt
 
-from turtle import position
+# from turtle import position
 import rospy
 from world_state import WorldController
 from controller import BasicBotController
 from PID import PID
 import datetime
+import threading
 
 def talker(waypoints):
 
@@ -91,10 +93,11 @@ def talker(waypoints):
                 waypoint_index += 1
 
 
+
 if __name__ == "__main__":
 
     # read in the PGM map, and convert all elements to [0, 1]
-    mapImage = img_as_float(imread("./map3.pgm"))
+    mapImage = plt.imread("./map3.pgm") / 255.0
     # rotate the map a little
     a = pi/40
     R = np.array([
@@ -103,18 +106,18 @@ if __name__ == "__main__":
         [0, 0, 1]
     ])
 
-    mapImage = affine_transform(mapImage, np.linalg.inv(R))
+    # mapImage = affine_transform(mapImage, np.linalg.inv(R))
 
     # mapImage = affine_transform(mapImage, np.linalg.inv(T))
 
     # calculating from image pixel, so distances are based on number of pixels
-    trueRobotRadius = 0.2  # metres
+    trueRobotRadius = 0.3  # metres
     mapResolution = 0.05  # metres/block
 
     # transform from world to picture
     T = np.array([
-        [1/mapResolution, 0, 300],
-        [0, 1/mapResolution, 355],
+        [1/mapResolution, 0, 320],
+        [0, 1/mapResolution, 330],
         [0, 0, 1]
     ])
 
@@ -130,18 +133,23 @@ if __name__ == "__main__":
     prm.setStart(Node(p[0], p[1]))
     prm.setTarget(Node(100, 150))
     path = prm.findPath()
-    # prm.visualise(path)
+
+    prm.visualise(path)
+
+    # t = threading.Thread(target=prm.visualise, args=(path))
+    # t.start()
 
     PtW = np.linalg.inv(WtP)
-    # print(path)
+    transformed_path = []
     for i in range(len(path)):
-        point = np.matmul(PtW, np.array([path[i][0], path[i][1], 1]))
-        path[i] = (point[0], -point[1])
+        point = np.matmul(PtW, np.array([path[i].x, path[i].y, 1]))
+        transformed_path.append((point[0], -point[1]))
 
     # print(path)
 
     try:
-        talker(path)
+        talker(transformed_path)
     except rospy.ROSInterruptException:
+        # t.join()
         quit()
 

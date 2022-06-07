@@ -103,7 +103,7 @@ class PRM:
     # find a path
     def findPath(self):
         # try and find a path
-        path_found, path = self.roadmap.astar(self.start, self.target)
+        path_found, path = self.roadmap.BFS(self.start, self.target)
 
         # if a path doesn't exist, sample more points and try again
         # do for a maximum number of times before returning no path
@@ -115,7 +115,7 @@ class PRM:
             print("expanding with", len(self.roadmap.nodes), "exsiting nodes")
             # self.visualise()
             # check for a path
-            path_found, path = self.roadmap.astar(self.start, self.target)
+            path_found, path = self.roadmap.BFS(self.start, self.target)
 
             count += 1
 
@@ -160,8 +160,8 @@ class PRM:
                 node0 = path[i - 1]
                 node1 = path[i]
                 plt.plot(
-                    [int(node0[0]), int(node1[0])],
-                    [int(node0[1]), int(node1[1])],
+                    [int(node0.x), int(node1.x)],
+                    [int(node0.y), int(node1.y)],
                     linewidth=1,
                     color="orange",
                     label="path" if i == 1 else "",
@@ -195,4 +195,4 @@ class PRM:
         plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
         plt.tight_layout()
 
-        plt.show()
+        plt.show(block=False)
