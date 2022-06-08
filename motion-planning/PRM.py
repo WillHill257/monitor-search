@@ -8,13 +8,21 @@ from graph import *
 import random
 #from typing import List
 import matplotlib.pyplot as plt
+from math import pi, sin, cos
+import numpy as np
 
 
 class PRM:
     # initialise
-    def __init__(
-        self, adjacency_radius, step_size, occupancy_threshold, robot_radius
-    ):
+    def __init__(self, adjacency_radius, step_size, occupancy_threshold):
+
+        # rotate the map a little
+        self.mapResolution = 0.05
+        self.trueRobotRadius = 0.15  # metres
+
+        robot_radius = 2 * int(
+            np.ceil(self.trueRobotRadius / self.mapResolution))
+
         self.worldmap = Map(step_size, occupancy_threshold, robot_radius)
         self.roadmap = Graph()
         self.start = None
@@ -24,6 +32,16 @@ class PRM:
         self.radius = adjacency_radius
         self.ROADMAP_MAX_ADDITIONAL_SAMPLES = 100
         self.ROADMAP_ADDITIONAL_SAMPLE_SIZE = 100
+
+        a = pi / 40
+        R = np.array([[cos(a), sin(a), 0], [-sin(a), cos(a), 0], [0, 0, 1]])
+
+        # transform from world to picture
+        T = np.array([[1 / self.mapResolution, 0, 320],
+                      [0, 1 / self.mapResolution, 330], [0, 0, 1]])
+
+        self.WtP = np.matmul(T, R)
+        self.PtW = np.linalg.inv(self.WtP)
 
     # updates the map of the world/environment
 
@@ -108,11 +126,13 @@ class PRM:
         # if a path doesn't exist, sample more points and try again
         # do for a maximum number of times before returning no path
         count = 0
-        while (not path_found) and (count < self.ROADMAP_MAX_ADDITIONAL_SAMPLES):
+        while (not path_found) and (count <
+                                    self.ROADMAP_MAX_ADDITIONAL_SAMPLES):
 
             # expand the roadmap
             self.expandRoadmap(self.ROADMAP_ADDITIONAL_SAMPLE_SIZE)
-            print("expanding with", len(self.roadmap.nodes), "exsiting nodes")
+            print "Expanding with " + str(len(
+                self.roadmap.nodes)) + " existing nodes..."
             # self.visualise()
             # check for a path
             path_found, path = self.roadmap.BFS(self.start, self.target)

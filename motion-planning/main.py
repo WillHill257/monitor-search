@@ -26,12 +26,11 @@ import threading
 # detector
 from detector import Detector
 
-world = WorldController()
 
-
-def move(waypoints, controller, pid_x, pid_rot):
+def move(waypoints, controller, pid_x, pid_rot, world):
     waypoint_index = 0
     start = datetime.datetime.now()
+    print "Moving..."
 
     while waypoint_index < len(waypoints):
 
@@ -65,10 +64,10 @@ def move(waypoints, controller, pid_x, pid_rot):
 
             control_rot = pid_rot.u(yaw, heading_ang)
 
-            print "Heading: " + str(heading_ang)
-            print "Yaw: " + str(yaw)
-            print "Control: " + str(control_rot)
-            print ''
+            # print "Heading: " + str(heading_ang)
+            # print "Yaw: " + str(yaw)
+            # print "Control: " + str(control_rot)
+            # print ''
 
             controller.SetRotate(control_rot)
 
@@ -91,57 +90,44 @@ def move(waypoints, controller, pid_x, pid_rot):
     controller.SetCommand(0, 0, 0)
     controller.SetRotate(0)
 
-def get_transformed_path():
-    goal = list(map(int, raw_input("Enter goal position: ").split(" ")))
 
+def generate_map():
+    print "Generating PRM..."
     # read in the PGM map, and convert all elements to [0, 1]
     mapImage = plt.imread("./map3_edited.pgm") / 255.0
-    # rotate the map a little
-    a = pi / 40
-    R = np.array([[cos(a), sin(a), 0], [-sin(a), cos(a), 0], [0, 0, 1]])
 
-    # mapImage = affine_transform(mapImage, np.linalg.inv(R))
+    # this is in picture coordinate
+    prm = PRM(50, 0.25, 0.82)
+    prm.updateMap(mapImage)
+    prm.expandRoadmap(100)
+    return prm
 
-    # mapImage = affine_transform(mapImage, np.linalg.inv(T))
 
-    # calculating from image pixel, so distances are based on number of pixels
-    trueRobotRadius = 0.15  # metres
-    mapResolution = 0.05  # metres/block
-
-    # transform from world to picture
-    T = np.array([[1 / mapResolution, 0, 320], [0, 1 / mapResolution, 330],
-                  [0, 0, 1]])
-
-    WtP = np.matmul(T, R)
-    PtW = np.linalg.inv(WtP)
+def get_transformed_path(prm):
+    goal = list(map(float, raw_input("Enter goal position: ").split(" ")))
 
     state = world.GetModelState()
     position = state.position
     start = np.array([position.x, -position.y])
     print "starting at: " + str(start[0]) + ", " + str(start[1])
     # p = np.array([0, 0])  # world origin
-    start = np.matmul(WtP, np.concatenate((start, np.array([1]))))
+    start = np.matmul(prm.WtP, np.concatenate((start, np.array([1]))))
     start = start.astype(np.int32)
 
     goal = np.array([goal[0], -goal[1]])
-    goal = np.matmul(WtP, np.concatenate((goal, np.array([1]))))
+    goal = np.matmul(prm.WtP, np.concatenate((goal, np.array([1]))))
     goal = goal.astype(np.int32)
 
-    # this is in picture coordinate
-    prm = PRM(50, 0.25, 0.82,
-              2 * int(np.ceil(trueRobotRadius / mapResolution)))
-    prm.updateMap(mapImage)
-    prm.expandRoadmap(100)
     prm.setStart(Node(start[0], start[1]))
     prm.setTarget(Node(goal[0], goal[1]))
 
     # prm.visualise()
     path = prm.findPath()
-    # prm.visualise(path)
+    prm.visualise(path)
 
     transformed_path = []
     for i in range(len(path)):
-        point = np.matmul(PtW, np.array([path[i].x, path[i].y, 1]))
+        point = np.matmul(prm.PtW, np.array([path[i].x, path[i].y, 1]))
         transformed_path.append((point[0], -point[1]))
 
     return transformed_path
@@ -151,7 +137,11 @@ if __name__ == "__main__":
 
     node = rospy.init_node("talker", anonymous=True)
 
-    transformed_path = get_transformed_path()
+    world = WorldController()
+
+    prm = generate_map()
+
+    transformed_path = get_transformed_path(prm)
 
     pid_x = PID(0.5, 0.1, 0.5)
     pid_rot = PID(2, 0.1, 0.15)
@@ -160,15 +150,13 @@ if __name__ == "__main__":
 
     move_thread = threading.Thread(target=move,
                                    args=(transformed_path, controller, pid_x,
-                                         pid_rot))
+                                         pid_rot, world))
 
     try:
-        move_thread.start()
 
+        move_thread.start()
         detector = Detector()
         while not rospy.is_shutdown():
-
-            # move(transformed_path, controller, pid_x, pid_rot)
 
             found = False
             if not detector.image_received:
@@ -178,6 +166,13 @@ if __name__ == "__main__":
             found = detector.is_present()
 
             detector.pub.publish('Yes' if found else 'No')
+
+            if not move_thread.is_alive():
+                transformed_path = get_transformed_path(prm)
+                move_thread = threading.Thread(target=move,
+                                   args=(transformed_path, controller, pid_x,
+                                         pid_rot, world))
+                move_thread.start()
 
     except rospy.ROSInterruptException:
         quit()
