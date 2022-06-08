@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-
 """
 - create the PRM
 - poll the getmap service for map data
@@ -22,23 +21,19 @@ from controller import BasicBotController
 from PID import PID
 import datetime
 
+import threading
+
+# detector
+from detector import Detector
+
 world = WorldController()
 
-def talker(waypoints):
 
-
-    pid_x = PID(0.5, 0.1, 0.5)
-    pid_rot = PID(2, 0.1, 0.15)
-
-    controller = BasicBotController()
-
-    
-
+def move(waypoints, controller, pid_x, pid_rot):
+    waypoint_index = 0
     start = datetime.datetime.now()
 
-    waypoint_index = 0
-
-    while not rospy.is_shutdown() and waypoint_index < len(waypoints):
+    while waypoint_index < len(waypoints):
 
         end = datetime.datetime.now()
         d = end - start
@@ -63,11 +58,10 @@ def talker(waypoints):
                 yaw = 2 * np.pi + yaw
 
             if yaw - heading_ang > np.pi:
-                heading_ang += 2*np.pi
+                heading_ang += 2 * np.pi
 
             if heading_ang - yaw > np.pi:
-                yaw += 2*np.pi
-
+                yaw += 2 * np.pi
 
             control_rot = pid_rot.u(yaw, heading_ang)
 
@@ -94,23 +88,17 @@ def talker(waypoints):
             if np.linalg.norm(pos_list - np.array(setpoint)) < 0.2:
                 waypoint_index += 1
 
+    controller.SetCommand(0, 0, 0)
+    controller.SetRotate(0)
 
-
-if __name__ == "__main__":
-
-    node = rospy.init_node("talker", anonymous=True)
-
-    goal= list(map(int, raw_input("Enter goal position: ").split(" ")))
+def get_transformed_path():
+    goal = list(map(int, raw_input("Enter goal position: ").split(" ")))
 
     # read in the PGM map, and convert all elements to [0, 1]
     mapImage = plt.imread("./map3_edited.pgm") / 255.0
     # rotate the map a little
-    a = pi/40
-    R = np.array([
-        [cos(a), sin(a), 0],
-        [-sin(a), cos(a), 0],
-        [0, 0, 1]
-    ])
+    a = pi / 40
+    R = np.array([[cos(a), sin(a), 0], [-sin(a), cos(a), 0], [0, 0, 1]])
 
     # mapImage = affine_transform(mapImage, np.linalg.inv(R))
 
@@ -121,11 +109,8 @@ if __name__ == "__main__":
     mapResolution = 0.05  # metres/block
 
     # transform from world to picture
-    T = np.array([
-        [1/mapResolution, 0, 320],
-        [0, 1/mapResolution, 330],
-        [0, 0, 1]
-    ])
+    T = np.array([[1 / mapResolution, 0, 320], [0, 1 / mapResolution, 330],
+                  [0, 0, 1]])
 
     WtP = np.matmul(T, R)
     PtW = np.linalg.inv(WtP)
@@ -143,7 +128,8 @@ if __name__ == "__main__":
     goal = goal.astype(np.int32)
 
     # this is in picture coordinate
-    prm = PRM(50, 0.25, 0.82, 2*int(np.ceil(trueRobotRadius / mapResolution)))
+    prm = PRM(50, 0.25, 0.82,
+              2 * int(np.ceil(trueRobotRadius / mapResolution)))
     prm.updateMap(mapImage)
     prm.expandRoadmap(100)
     prm.setStart(Node(start[0], start[1]))
@@ -158,11 +144,43 @@ if __name__ == "__main__":
         point = np.matmul(PtW, np.array([path[i].x, path[i].y, 1]))
         transformed_path.append((point[0], -point[1]))
 
-    # print(path)
+    return transformed_path
+
+
+if __name__ == "__main__":
+
+    node = rospy.init_node("talker", anonymous=True)
+
+    transformed_path = get_transformed_path()
+
+    pid_x = PID(0.5, 0.1, 0.5)
+    pid_rot = PID(2, 0.1, 0.15)
+
+    controller = BasicBotController()
+
+    move_thread = threading.Thread(target=move,
+                                   args=(transformed_path, controller, pid_x,
+                                         pid_rot))
 
     try:
-        talker(transformed_path)
+        move_thread.start()
+
+        detector = Detector()
+        while not rospy.is_shutdown():
+
+            # move(transformed_path, controller, pid_x, pid_rot)
+
+            found = False
+            if not detector.image_received:
+                continue
+
+            detector.get_threshold()
+            found = detector.is_present()
+
+            detector.pub.publish('Yes' if found else 'No')
+
     except rospy.ROSInterruptException:
-        # t.join()
         quit()
 
+    finally:
+        move_thread.join()
